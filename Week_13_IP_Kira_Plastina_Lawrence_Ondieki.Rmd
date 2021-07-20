@@ -1,0 +1,362 @@
+---
+title: "R Notebook Kira Plastina"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+## 1.3 Loading Data
+```{r}
+# Loading the Dataset 
+kira = read.csv('http://bit.ly/EcommerceCustomersDataset')
+head(kira)
+```
+### 1.3.1 Dataset information
+```{r}
+# Dataset information
+str(kira)
+```
+*The Kira dataset has 12,330 observations with 18 Variables.*
+
+### 1.3.2 Data summary
+```{r}
+# Data summary
+summary(kira)
+```
+## 1.4 Data Cleaning
+### 1.4.1 Missing Values
+```{r}
+# Checking for Missing Values
+
+colSums(is.na(kira))
+```
+There are 8 columns with 14 NA values each.
+We replace these NA values with the mean of each variable.
+```{r}
+library(dplyr)
+kira  = mutate(kira,
+               Administrative=replace(Administrative,
+                                      is.na(Administrative),
+                                      mean(Administrative,na.rm=TRUE)))
+kira  = mutate(kira,
+               Administrative_Duration=replace(Administrative_Duration,
+                                               is.na(Administrative_Duration),
+                                               mean(Administrative_Duration,na.rm=TRUE)))
+             
+kira  = mutate(kira,
+               Informational = replace(Informational, 
+                                       is.na(Informational), 
+                                       mean(Informational, na.rm = TRUE)))               
+                              
+kira  = mutate(kira,
+               Informational_Duration=replace(Informational_Duration,
+                                              is.na(Informational_Duration),
+                                              mean(Informational_Duration,na.rm=TRUE)))                              
+
+kira  = mutate(kira,
+               ProductRelated=replace(ProductRelated,
+                                       is.na(ProductRelated),
+                                       mean(ProductRelated,na.rm=TRUE)))                                             
+kira  = mutate(kira,
+               ProductRelated_Duration=replace(ProductRelated_Duration, 
+                                               is.na(ProductRelated_Duration), 
+                                               mean(ProductRelated_Duration, na.rm = TRUE)))                                                            
+kira  = mutate(kira,
+               BounceRates =replace(BounceRates, 
+                                    is.na(BounceRates),
+                                    mean(BounceRates,na.rm=TRUE)))                                                                           
+kira  = mutate(kira,
+               ExitRates = replace(ExitRates, is.na(ExitRates), mean(ExitRates, na.rm = TRUE)))
+    
+```
+
+```{r}
+# Confirming there are no Missing Values after replacing with mean
+
+colSums(is.na(kira))
+```
+There are no missing values after replacing all NA values with respective mean values.
+
+### 1.4.2 Duplicated observations (records)
+```{r}
+# Check for duplicated observations
+dim(kira)
+dim(kira[duplicated(kira),])
+```
+There are 119 out of the total 12330 duplicated observations.
+
+```{r}
+# Remove the 119 duplicated observations
+kira_clean <- kira[!duplicated(kira),]
+dim(kira_clean)
+```
+The clean dataframe has 12211 observations in total after dropping duplicates.
+
+<hr />
+
+### 1.4.3 Univariate Analysis - Box Plots
+```{r}
+boxplot(kira_clean[c(1,3,11,12)])
+```
+```{r}
+boxplot(kira_clean[c(2,4)])
+```
+```{r}
+boxplot(kira_clean[c(5,9)])
+```
+```{r}
+boxplot(kira_clean[7:8])
+```
+```{r}
+boxplot(kira_clean[6])
+```
+```{r}
+boxplot(kira_clean[c(13,14,15,16)])
+```
+All the numerical data has outliers. We cannot remove all as it will leave little or no data to work with.
+We will use all the data to understand customer behaviour.
+
+<hr />
+### 1.4.4 Univariate Analysis - Histograms
+```{r}
+library(DataExplorer)
+plot_histogram(kira_clean[1:2])
+```
+```{r}
+plot_histogram(kira_clean[3:4])
+```
+```{r}
+plot_histogram(kira_clean[5:6])
+```
+```{r}
+plot_histogram(kira_clean[7:8])
+```
+```{r}
+plot_histogram(kira_clean[9:10])
+```
+
+All the 10 numerical variables are skewed to the right.
+
+<hr />
+
+## 1.5 Multivariate Analysis
+### 1.5.1 Correlation Matrix
+
+```{r}
+kira_cor <- cor(kira_clean[1:8])
+round(kira_cor, digits=2)
+```
+```{r}
+library(corrplot)
+corrplot(kira_cor)
+```
+
+```{r}
+# Generate a lighter palette
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+corrplot(kira_cor, method = "shade", shade.col = NA, tl.col = "black", tl.srt = 45,
+         col = col(200), addCoef.col = "black", cl.pos = "n", order = "AOE")
+```
+```{r}
+options(repr.plot.width=10, repr.plot.height=10)
+pairs(kira_clean[,1:10])
+```
+## 1.6 K-Means Clustering - Unsupervised Machine Learning
+```{r}
+# Checking data types to confirm which ones to be encoded from caterogical to numerical
+str(kira_clean)
+```
+### 1.6.1 One-Hot Encoding to have numerical variables converted to numerical
+
+```{r}
+# We will use One hot encoding of the factor (categorical) variables.
+library(caret)
+kira_dmy = dummyVars(" ~ .", data = kira_clean)
+
+kira_df = data.frame(predict(kira_dmy, newdata = kira_clean))
+```
+
+```{r}
+# Checking the data types of each attribute
+str(kira_df)
+```
+The new kira_df dataframe has now 31 variables (from the 18 variables) after one-hot encoding
+### 1.6.2 Separate the Class Label from the rest of the data. 
+Revenue is the class label.
+```{r}
+# Hence we will remove it and store it in another variable
+
+kira_df_copy <- kira_df[, -c(30:31)]
+kira_clean.class<- kira_clean[, "Revenue"]
+
+kira_df_copy_copy <- kira_df[, -c(30,31)]
+```
+```{r}
+# Previewing the class
+head(kira_clean.class)
+```
+```{r}
+# Previewing the copy dataset with dummies
+head(kira_df_copy)
+```
+
+```{r}
+# Step 3: Normalizing OR SCALING the data?? Lets see which gives the best:
+# This is important to ensure that no particular attribute,
+# Has more impact on clustering algorithm than others
+
+kira_scaled <- scale(kira_df_copy)
+```
+
+```{r}
+# After scaling the data lets see what we find in the output
+summary(kira_scaled)
+```
+It is evident that there are some attributes still with large values compared to others.
+Scaling makes the data changes the data to have a mean 0.
+We will normalize the data and see if we get different results.
+```{r}
+# Normalizing the a copy of the original data
+
+kira_norm <- as.data.frame(apply(kira_df_copy, 2, function(x) (x - min(x))/(max(x)-min(x))))
+```
+
+```{r}
+# summary of the normalized data.
+summary(kira_norm)
+```
+Here, we have a maximum value of 1 and minimum value of 0s and mean of close to zero in all attributes.
+We will use the NORMALIZED dataset for clustering.
+
+```{r}
+# Searching for the optimal number of clusters
+# # Elbow method
+library(factoextra)
+fviz_nbclust(kira_norm, kmeans, method = "wss") +
+    geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+```
+```{r}
+# Applying K-Means  Clustering algorithm 
+# Using 4 centroids as K=4
+
+km_result <- kmeans(kira_norm, 10)
+```
+```{r}
+# Previewing the number of records in each cluster
+
+km_result$size
+```
+```{r}
+# Applying K-Means  Clustering algorithm 
+# Using 3 centroids as K=3
+
+km_result <- kmeans(kira_norm, 10)
+```
+```{r}
+# Previewing the number of records in each cluster
+
+km_result$size
+```
+```{r}
+# Viewing the cluster center datapoints by each attribute
+
+km_result$centers
+```
+
+```{r}
+# Plotting two variables to see how their data points 
+# have been distributed in the cluster
+# Product Related, vs Product Related Duration
+
+plot(kira_norm[, 5:6], col = km_result$cluster)
+```
+
+```{r}
+# Product Related, vs Product Related Duration
+
+plot(kira_norm[, 7:8], col = km_result$cluster)
+```
+
+```{r}
+# Product Related, vs Product Related Duration
+
+plot(kira_norm[1:10], col = km_result$cluster)
+```
+##  1.7 Hierachical Clustering
+```{r}
+# We use R function hclust() 
+# For hierarchical clustering
+# First we use the dist() to compute the Euclidean distance btwn obs
+# d will be the first argument in the hclust() dissimilairty matrix
+# 
+
+d <- dist(kira_norm, method = "euclidean")
+
+# We then apply hierarchical clustering using the Ward's method
+
+res.hc <- hclust(d, method = "ward.D2")
+
+# Lastly we plot the obtained dendrogram
+#--
+
+plot(res.hc, cex = 0.6, hang = -1)
+```
+## 1.7.1 Principal Component Analysis (PCA)
+```{r}
+# Applying PCA
+# We pass kira_norm to the prcomp().
+# We also set two arguments, center and scale, 
+# to be TRUE then preview our object with summary
+kira_norm_pca <- prcomp(kira_norm,
+              center = TRUE,
+              scale = FALSE) 
+summary(kira_norm_pca)
+```
+```{r}
+library(ggbiplot)
+# Plotting the variable importance
+ggbiplot(kira_norm_pca) + coord_equal(ratio = 0.5)
+```
+From the graph we will see that the variables month of Feb & May, returning visitor, operating systems, exit rate,and Special day contribute to PC1,
+```{r}
+# # # Adding more detail to the plot,
+# # we provide labels as the revenue: True or False.
+# 
+ggbiplot(kira_norm_pca, 
+       labels = kira_clean.class,
+       obs.scale = 1,
+       var.scale = 1) +
+       coord_equal(ratio = 0.5)
+```
+Weekend were important in determining the second Principal component, (PC2)
+
+### 1.7.3  t-Distributed Stochastic Neighbor Embedding (t-SNE)
+```{r}
+# Preparation for plotting
+
+colors <- rainbow(length(unique(kira_clean.class)))
+names(colors) = unique(kira_clean.class)
+```
+
+```{r}
+# Applying t-SNE
+library(Rtsne)
+tsne <- Rtsne(kira_norm, dims =2, perplexity = 30, verbosity = TRUE,
+      max_iter = 500)
+
+# getting the time it takes to execute
+
+exeTimeTsne <- system.time(Rtsne(kira_norm, dims = 2, perplexity = 30,
+verbose = TRUE, max_iter = 500))
+```
+
+```{r}
+# Plotting our graph and closely examining the graph
+
+plot(tsne$Y, t = 'n', main = "tnse")
+text(tsne$Y, labels =kira$Revenue, col = "purple")
+```
+

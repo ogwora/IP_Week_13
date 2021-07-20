@@ -1,0 +1,379 @@
+---
+title: "Moringa_Core_DS9_Lawrence_Ondieki_IP_WK13_Part1"
+author: "Lawrence Ondieki"
+date: "11 July 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1)
+```
+
+# The Context
+A Kenyan entrepreneur has created an online cryptography course and would want to advertise it on her blog. She currently targets audiences originating from various countries. In the past, she ran ads to advertise a related course on the same blog and collected data in the process. She would now like to employ my services as a Data Science Consultant to help her identify which individuals are most likely to click on her ads.
+
+## Define the Question
+What are the factors that can determine if a visitor to a site will click on an advertisement.
+
+## Metric of Success
+Identify the top factors that can determine if a visitor will click on an advertisement.
+
+## The Experimental Design
+1. Data was sourced from http://bit.ly/IPAdvertisingData. <br>
+2. R was used as the analysis tool.<br>
+3. An R-Markdown and HTML documents will be delivered <br>
+
+# Exploratory Data Analysis (EDA)
+
+## Import the data and look at the first six rows
+```{r}
+# Import the data and look at the first six rows
+advertising <- read.csv(file = 'advertising.csv',stringsAsFactors = FALSE)
+head(advertising)
+```
+### Check the data composition at a high level
+```{r}
+str(advertising)
+```
+### Data Column Names
+```{r}
+colnames(advertising)
+```
+## Appropriateness of the available data to answer the given question.
+Given that the data was collected from the recent campaign, it is assumed to be appropriate for this research.<br>
+The data is anonymized.
+
+
+## Check for any missing values
+```{r}
+colSums(is.na(advertising))
+```
+<br>
+There are no missing values.
+
+# Univariate Analysis - Daily Time Spent On Site
+```{r}
+Daily_Time_Spent_on_Site <- advertising$Daily.Time.Spent.on.Site
+par(mfrow=c(1,2),pin=c(3,2.5)) # Set the plotting area into a 1 * 2 array
+boxplot(advertising$Daily.Time.Spent.on.Site,horizontal=TRUE,main="Box Plot")
+hist(Daily_Time_Spent_on_Site,main="Histogram")
+```
+<br>
+There are no outliers but Daily Time Spent On Site is right-skewed.
+
+# Univariate Analysis - Area Income
+```{r}
+par(mfrow=c(1,2),pin=c(3,2.5))
+Area_Income <- advertising$Area.Income
+boxplot(Area_Income, horizontal = TRUE, main="Box Plot")
+hist(Area_Income, main="Histogram")
+```
+<br>
+Area Income has outliers for low income and right skewed.
+
+# Univariate Analysis - Daily Internet Usage
+```{r}
+Daily_Internet_Usage <- advertising$Daily.Internet.Usage
+par(mfrow=c(1,2),pin=c(3,2.5)) # Set the plotting area into a 1 * 2 array
+boxplot(Daily_Internet_Usage,horizontal=TRUE,main="Box Plot")
+hist(Daily_Internet_Usage,main="Histogram")
+```
+<br>
+Daily Internet Usage has no outliers and fairly distributed.
+
+# Univariate Analysis - Gender
+
+```{r}
+Male <- advertising$Male
+Clicked_On_Ad <- advertising$Clicked.on.Ad
+par(mfrow=c(1,2),pin=c(3,2.5)) # Set the plotting area into a 1 * 2 array
+pie(table(Male),col=c("purple","cyan"),labels=c("Female", "Male"), main="Composition by Gender")
+pie(table(Clicked_On_Ad),col=c("red","green"),labels=c("No", "Yes"), main="Clicked on Advert")
+```
+<br>
+The dataset had slightly more females than males.<br>
+There was an equal number of clicks and no-clicks (50% -50%).
+
+```{r}
+Male <- advertising$Male
+table(Male)
+```
+```{r}
+Clicked_On_Ad <- advertising$Clicked.on.Ad
+table(Clicked_On_Ad)
+```
+```{r}
+clicked.freq.matrix <- table(advertising$Male,advertising$Clicked.on.Ad)
+clicked.freq.matrix
+```
+# Univariate Analysis - Frequency distribution of Clicks
+
+```{r}
+par(pin=c(5.5,1))
+barplot(clicked.freq.matrix,beside=TRUE,las=1, horiz=TRUE, main="Advert Click counts by Gender", col=c("purple", "cyan"), names.arg=c("No_Click","Clicked"),legend.text=c("female","male"), args.legend=list(x="center"))
+```
+<br>
+There were more advert clicks from females than from male.
+
+# Multivariate analysis - all numerical variables
+## Correlation matrix
+```{r}
+res <- cor(advertising[,c(1,2,3,4,7,10)])
+res
+```
+## Load correlation plot library 
+```{r}
+library(corrplot)
+```
+## Plot the correlation
+```{r}
+corrplot(res, type="upper", order="hclust", tl.col="black", tl.srt=45)
+```
+<br>
+
+## Important features to determine a click on an advertisement:-
+
+1. Daily Internet Usage.<br>
+2. Daily Time Spent on the site.<br>
+3. The Area Income.<br>
+
+```{r}
+library("PerformanceAnalytics")
+```
+
+```{r}
+chart.Correlation(advertising[,c(1,2,3,4,7,10)], histogram = TRUE, pch=19)
+```
+
+# Conclusion
+
+Important features to determine a click on an add:- <br>
+
+1. Daily Internet Usage.<br>
+2. Daily Time Spent on the site.<br>
+3. The Area Income.<br>
+
+# Recommendations
+Focus on adding content to site to keep visitors coming and staying longet on the site and on high income area.
+
+
+#Modelling (Week13_IP Part2)
+
+This is a classification problem of identifying whether a user will click on an ad or not.
+
+```{r}
+head(advertising)
+```
+## K-Nearest Neighbours (K-NN)
+```{r}
+# Randomizing the rows, creates a uniform distribution of 1000
+set.seed(1234)
+random <- runif(1000)
+ad_sample <- advertising[order(random),]
+# Selecting the first 6 rows from random sample
+head(ad_sample)
+```
+```{r}
+##Drop columns we dont need
+ad_sample <- subset(ad_sample, select = -c(5,6,7,8,10,11,12,13))
+head(ad_sample)
+# Normalizing the numerical variables of the data set using min-max method.
+normal <- function(x) (
+  return( ((x - min(x)) /(max(x)-min(x))) )
+)
+normal(1:5)
+ad_data <- as.data.frame(lapply(ad_sample[,1:4], normal))
+head(ad_data)
+summary(ad_data)
+```
+Splitting the dataset into train and test
+```{r}
+# Split dataset to test and train data sets
+train <- ad_data[1:800,]
+test <- ad_data[801:1000,]
+train_sp_knn <- ad_sample[1:800,5]
+test_sp_knn <- ad_sample[801:1000,5]
+```
+K-NN algorithm
+```{r}
+# Now we can use the K-NN algorithm. 
+library(class)    
+require(class)
+model <- knn(train= train,test=test, ,cl= train_sp_knn,k=13)
+table(factor(model))
+```
+```{r}
+tst_sp_tbl <- table(test_sp_knn,model)
+head(tst_sp_tbl, 1)
+```
+
+##Decision Trees
+```{r}
+library(caTools)
+set.seed(123)
+# Fitting Decision Tree Classification to the Training set
+library(rpart)
+library(party)
+cl = rpart(Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Age + Area.Income + Daily.Internet.Usage, data = advertising)
+classifier<-ctree(Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Age + Area.Income + Daily.Internet.Usage, data = advertising)
+# Plotting the tree
+par("mar")
+par(mar=c(1,1,1,1))
+plot(cl)
+plot(classifier)
+#text(cl)
+```
+
+Our decision tree has by giving us trees that classify our data.
+The the trees are crowded as our dataset is large thus decision trees makes it hard for the classification 
+
+##SVM
+```{r}
+# Randomizing the rows, creates a uniform distribution of 1000
+set.seed(1234)
+random <- runif(1000)
+ad_sample <- advertising[order(random),]
+ad_sample$Clicked.on.Ad <- as.factor(ad_sample$Clicked.on.Ad)
+# Selecting the first 6 rows from random sample
+head(ad_sample)
+```
+
+```{r}
+# Load the caret package. 
+library(caret)
+# Next we split the data into training set and testing set. 
+# Next we split the data into training set and testing set. 
+train <- createDataPartition( y=ad_sample$Clicked.on.Ad, p= 0.7, list = FALSE)
+train_svm <- ad_sample[train,]
+test_svm <- ad_sample[-train,]
+```
+
+```{r}
+# We check the dimensions of out training dataframe and testing dataframe
+# ---
+# 
+dim(train_svm)
+dim(test_svm)
+```
+```{r}
+# We then clean the data using the anyNA() method that checks for any null values.
+# ---
+#  
+anyNA(ad_sample)
+```
+
+```{r}
+# Then check the summary of our data by using the summary() function
+# ---
+#  
+summary(ad_sample)
+```
+```{r}
+# We will implement this through the trainControl() method. 
+# This will allow us to use the train() function provided by the caret package. 
+# ---
+
+library(e1071)
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+svm_Linear <- train(Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Age + Area.Income + Daily.Internet.Usage, data = train_svm, method = "svmLinear",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+```
+
+
+```{r}
+# We can then check the reult of our train() model as shown below
+# ---
+# 
+svm_Linear
+```
+
+
+```{r}
+# We can use the predict() method for predicting results as shown below. 
+# We pass 2 arguements, our trained model and our testing data frame.
+# ---
+# 
+test_pred <- predict(svm_Linear, newdata = test_svm)
+test_pred
+```
+```{r}
+# Now checking for our accuracy of our model by using a confusion matrix 
+# ---
+# 
+library(caret)
+confusionMatrix(table(test_pred, test_svm$Clicked.on.Ad))
+```
+## our SVM model has an accuracy score of 96.33.
+
+
+## Naive Bayes Classifier
+
+```{r}
+# Load the required packages
+library(tidyverse)
+library(ggplot2)
+library(caret)
+library(caretEnsemble)
+library(psych)
+library(Amelia)
+library(mice)
+library(GGally)
+library(rpart)
+library(randomForest)
+```
+
+```{r}
+# Randomizing the rows, creates a uniform distribution of 1000
+set.seed(1234)
+random <- runif(1000)
+ad_sample <- advertising[order(random),]
+ad_sample$Clicked.on.Ad <- as.factor(ad_sample$Clicked.on.Ad)
+# Selecting the first 6 rows from random sample
+head(ad_sample)
+```
+
+
+```{r}
+# Splitting data into training and test data sets
+# ---
+# 
+train_rf <- createDataPartition(y = ad_sample$Clicked.on.Ad,p = 0.7,list = FALSE)
+train_naive <- ad_sample[train_rf,]
+test_naive <- ad_sample[-train_rf,]
+```
+
+```{r}
+# Comparing the outcome of the training and testing phase
+# ---
+# Creating objects x which holds the predictor variables and y which holds the response variables
+# ---
+#
+x = ad_sample[,-5]
+y =  ad_sample$Clicked.on.Ad
+```
+
+```{r}
+##building  model 
+# ---
+# 
+library(e1071)
+model = train(x,y,'nb',trControl=trainControl(method='cv',number=10))
+```
+
+```{r}
+#  Evalution of Model
+# ---
+# Predicting our testing set
+library(klaR)
+# 
+Predict <- predict(model,newdata = ad_sample)
+# Getting the confusion matrix to see accuracy value and other parameter values
+# ---
+# 
+confusionMatrix(Predict, ad_sample$Clicked.on.Ad)
+```
+### Naive Bayes Model was our best perfoming model with an accuracy score of 100%
+
+##Follow Up Questions
+1. We had the right data as our classification models had very high accuracy scores
+2. Though the data was somewhat imbalanced, maybe dealing with the imbalanced data can help our models in predicton
